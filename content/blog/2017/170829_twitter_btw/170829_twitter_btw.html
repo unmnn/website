@@ -1,0 +1,391 @@
+---
+title: "Bundestagswahl 2017 - Text Mining in R on tweets from party frontrunners in the run-up to the German national elections"
+author: "Uli Niemann"
+date: 2017-08-29T18:30:00-00:00
+categories: ["R"]
+tags: ["Text Mining", "Twitter", "Sentiment", "Politics"]
+---
+
+
+
+<p>In this post, we try to examine tweets from the frontrunners of the most important German parties prior to this year’s <em>Bundestagswahl</em>, the national elections. To do so, we first use the R package <code>rtweet</code> to scrape tweets and then apply text mining functions from <code>tidytext</code> and <code>tm</code>.</p>
+<p>By analyzing the short messages from the politicians, we aim to answer the following questions:</p>
+<ol style="list-style-type: decimal">
+<li>How <strong>active</strong> are the frontrunners on Twitter?</li>
+<li>Does the <strong>frequency of tweets</strong> change as the Bundestagswahl comes closer?</li>
+<li>How much <strong>recognition and approval</strong> do the candiates receive?</li>
+<li>Are there <strong>words that are characteristic for a politician</strong>?</li>
+<li><strong>Which politician is polarizing</strong>, i.e., incorporates many <em>positive</em> or <em>negative</em> words?</li>
+<li><strong>Which politicians are similar</strong> with respect to their word usage?</li>
+</ol>
+<p>To reproduce the analysis, you can download the complete R code <a href="https://github.com/unmnn/twitter_btw_mining">here</a>.</p>
+<p>Before we start, let’s check which party frontruner actually does have a Twitter account. The bad news first: the presumable winner of the elections, chancelor Angela Merkel, is not represented at the microblogging service. However, her biggest challenger Martin Schulz from the SPD (Social Democratic Party of Germany) does tweet, as well as most of the other frontrunners of the most important German parties.</p>
+<p>Here is an overview of the frontrunners of the 7 largest German parties and and their Twitter accounts:</p>
+<ul>
+<li>CDU (Christian Democratic Union): Angela Merkel <em>no Twitter account</em></li>
+<li>CSU (Christian Social Union): Joachim Herrmann <em>no Twitter account</em></li>
+<li>SPD (Social Democratic Party of Germany): Martin Schulz <a href="https://twitter.com/MartinSchulz">@MartinSchulz</a></li>
+<li>Die Linke (The Left party): Sahra Wagenknecht <a href="https://twitter.com/SWagenknecht">@SWagenknecht</a> and Dietmar Bartsch <a href="https://twitter.com/DietmarBartsch">@DietmarBartsch</a></li>
+<li>Grüne (Green party): Katrin Göring-Eckardt <a href="https://twitter.com/GoeringEckardt">@GoeringEckardt</a> and Cem Özdemir <a href="https://twitter.com/cem_oezdemir">@cem_oezdemir</a></li>
+<li>FDP (Free Democratic Party): Christian Lindner <a href="https://twitter.com/c_lindner">@c_lindner</a></li>
+<li>AfD (Alternative for Germany): Alice Weidel <a href="https://twitter.com/Alice_Weidel">@Alice_Weidel</a> and Alexander Gauland <em>no Twitter account</em></li>
+</ul>
+<p>We restrict our analysis on tweets from the current year. Initially, I planned to conduct a long-term evaluation, starting with tweets from the beginning of the current legislation period in 2013. However, the Twitter API allows to download just <a href="https://dev.twitter.com/rest/reference/get/statuses/user_timeline">the latest 3200 tweets</a> (including retwets) of a user timeline.</p>
+<p>First, we have to create a <a href="https://apps.twitter.com/">Twitter app</a> to get credentials to access the api. After we have generated the <em>key</em> and <em>secret</em> pair we are ready to use the <code>rtweet</code> package, which not only downloads the requested tweets, but automatically converts them into a convenient <em>tidy</em> data frame format.</p>
+<pre class="r"><code># Load all neccessary libraries
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(forcats)
+library(rtweet)
+library(EBImage)
+library(ggimage)
+library(ggplot2bdc)
+library(extrafont)
+library(tidytext)
+library(tm)
+library(widyr)
+
+# Set ggplot2bdc::theme_bdc_grey() as default ggplot2 theme for plotting later on
+my_theme &lt;- function(base_size = 13, base_family = &quot;Arial Narrow&quot;) {
+  theme_bdc_grey(base_size = base_size, base_family = base_family)
+}
+theme_set(my_theme())</code></pre>
+<pre class="r"><code># The procedure in this code chunk is based on the rtweet vignette, see
+# https://github.com/mkearney/rtweet
+
+# name assigned to created app
+appname &lt;- &quot;BTW&#39;17&quot;
+# API key (example below is not a real key)
+key &lt;- &quot;36qjHG4JArZnmxtp2uBqE5wWg&quot;
+# API secret
+secret &lt;- &quot;aL5NpbsR7euwk2RxdcCdJ4ak4q4CwNa5KGYfcfwt4hYEWsRZnT&quot;
+twitter_token &lt;- create_token(
+  app = appname,
+  consumer_key = key,
+  consumer_secret = secret)
+
+# path of home directory
+home_directory &lt;- path.expand(&quot;~/&quot;)
+
+# combine with name for token
+file_name &lt;- file.path(home_directory, &quot;twitter_token.rds&quot;)
+
+# save token to home directory
+write_rds(twitter_token, file_name)
+
+cat(paste0(&quot;TWITTER_PAT=&quot;, file_name),
+    file = str_c(home_directory, &quot;.Renviron&quot;),
+    append = TRUE)</code></pre>
+<p>The reading of user timelines may take some time. Therefore, we save the data frame containing the tweets as <code>.rds</code> file, which we can access offline at any time.</p>
+<pre class="r"><code>account_names &lt;- c(&quot;MartinSchulz&quot;, 
+                   &quot;SWagenknecht&quot;, 
+                   &quot;DietmarBartsch&quot;, 
+                   &quot;GoeringEckardt&quot;, 
+                   &quot;cem_oezdemir&quot;, 
+                   &quot;c_lindner&quot;, 
+                   &quot;Alice_Weidel&quot;)</code></pre>
+<pre class="r"><code>Sys.setlocale(&quot;LC_TIME&quot;, &quot;English&quot;) # I had to change my locale to &#39;en&#39; to avoid problems with the date/time format
+tweets &lt;- get_timeline(account_names, n = 3200, tweet_mode = &quot;extended&quot;)
+Sys.setlocale(&quot;LC_TIME&quot;, &quot;German&quot;)
+write_rds(tweets, str_c(getwd(), &quot;/tweets.rds&quot;))</code></pre>
+<pre class="r"><code>tweets_2017 &lt;- read_rds(str_c(getwd(), &quot;/tweets.rds&quot;)) %&gt;%
+  select(screen_name, user_id, created_at, text, source, 
+         is_retweet, favorite_count, retweet_count, lang) %&gt;%
+  filter(created_at &gt; dmy(&quot;01.01.2017&quot;))
+glimpse(tweets_2017)</code></pre>
+<pre><code>## Observations: 7,696
+## Variables: 9
+## $ screen_name    &lt;chr&gt; &quot;MartinSchulz&quot;, &quot;MartinSchulz&quot;, &quot;MartinSchulz&quot;,...
+## $ user_id        &lt;chr&gt; &quot;17675072&quot;, &quot;17675072&quot;, &quot;17675072&quot;, &quot;17675072&quot;,...
+## $ created_at     &lt;dttm&gt; 2017-08-29 13:33:32, 2017-08-29 09:10:47, 2017...
+## $ text           &lt;chr&gt; &quot;Habe eben mit 4000 UnterstützerInnen telefonie...
+## $ source         &lt;chr&gt; &quot;Twitter for iPhone&quot;, &quot;Twitter for iPhone&quot;, &quot;Tw...
+## $ is_retweet     &lt;lgl&gt; FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE...
+## $ favorite_count &lt;int&gt; 118, 225, 290, 799, 550, 2617, 415, 781, 921, 3...
+## $ retweet_count  &lt;int&gt; 21, 59, 36, 172, 144, 58, 71, 148, 198, 41, 81,...
+## $ lang           &lt;chr&gt; &quot;de&quot;, &quot;und&quot;, &quot;de&quot;, &quot;de&quot;, &quot;de&quot;, &quot;de&quot;, &quot;de&quot;, &quot;de&quot;...</code></pre>
+<p>Next, we create a data frame, that assigns each account the corresponding party color and the profile picture.</p>
+<pre class="r"><code>twitter_info &lt;- tibble(
+  account_name = account_names,
+  party_color = c(&quot;#E30013&quot;, &quot;#DF007D&quot;, &quot;#940252&quot;, &quot;#1FAF12&quot;, &quot;#0F7008&quot;, &quot;#FFED00&quot;, &quot;#009DE0&quot;),
+  party_logo = c(&quot;https://upload.wikimedia.org/wikipedia/commons/thumb/a/a4/SPD_logo.svg/200px-SPD_logo.svg.png&quot;,
+                 rep(&quot;https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Die_Linke_logo.svg/200px-Die_Linke_logo.svg.png&quot;, 2),
+                 rep(&quot;https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/B%C3%BCndnis_90_-_Die_Gr%C3%BCnen_Logo.svg/200px-B%C3%BCndnis_90_-_Die_Gr%C3%BCnen_Logo.svg.png&quot;, 2),
+                 &quot;https://upload.wikimedia.org/wikipedia/commons/thumb/e/e2/Logo_der_Freien_Demokraten.svg/200px-Logo_der_Freien_Demokraten.svg.png&quot;,
+                 &quot;https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Alternative-fuer-Deutschland-Logo-2013.svg/200px-Alternative-fuer-Deutschland-Logo-2013.svg.png&quot;)
+)
+
+twitter_info %&lt;&gt;%
+  bind_cols(tibble(account_image = lookup_users(twitter_info$account_name)$profile_image_url))%&gt;%
+  mutate(account_image = str_replace(account_image, &quot;_normal\\.&quot;, &quot;_200x200\\.&quot;))</code></pre>
+<p>Alright, now we take a look on the data and answer our first question.</p>
+<div id="how-active-are-the-frontrunners-on-twitter" class="section level2">
+<h2>1. How active are the frontrunners on Twitter?</h2>
+<pre class="r"><code># Count number of tweets and retweets per politician 
+df_plot &lt;- tweets_2017 %&gt;%
+  count(screen_name, is_retweet) %&gt;%
+  spread(is_retweet, n) %&gt;%
+  rename(own = `FALSE`, retweets = `TRUE`) %&gt;%
+  mutate(total = own + retweets) %&gt;%
+  inner_join(twitter_info, by = c(&quot;screen_name&quot; = &quot;account_name&quot;)) %&gt;%
+  mutate(screen_name = fct_rev(factor(screen_name, levels = twitter_info$account_name)))
+
+ggplot(df_plot, aes(x = screen_name, fill = screen_name)) +
+  geom_col(color = &quot;grey&quot;, aes(y = total), alpha = .3) +
+  geom_col(color = &quot;grey&quot;, aes(y = own)) +
+  geom_image(data = df_plot %&gt;% group_by(screen_name) %&gt;% slice(1) %&gt;% ungroup(),
+             aes(y = -150, image = account_image), size = .1) +
+  scale_fill_manual(values = rev(twitter_info$party_color)) +
+  coord_flip() +
+  scale_y_continuous(limits = c(-200, max(df_plot$total))) +
+  guides(fill = FALSE) +
+  labs(x = NULL, y = &quot;Number of tweets&quot;, title = str_c(&quot;Tweet count of German party frontrunners in 2017&quot;),
+       subtitle = str_c(&quot;retweets semi-transparent&quot;)) +
+  theme(plot.caption = element_text(hjust = 0))</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/tweet-count-1.png" width="672" /></p>
+<p>It seems as if Christian Lindner is the most diligent tweeter, followed by Katrin Göring-Eckardt and Cem Özdemir. But wait a second: has the party leader of the FDP really sent over 900 tweets and retweeted more than 1000 times within 241 days of 2017? Looking at his profile page it becomes apparent that not all tweets are written by himself. Lindner closes his own short messages with his acronym <em>“CL”</em> while tweets from his team are tagged with the abbreviation <em>“TL”</em>. Besides Linder, Göring-Eckardts account is also supported by an editorial team. Approximatly 48% of Linder’s tweets are written by his staff. The respective number is ca. 23% for Göring-Eckardt. We can assume that a considerable number of retweets are also not sent by the politicians themselves.</p>
+<div class="figure">
+<img src="img/lindner_ges.png" />
+
+</div>
+<p>Noticably, Martin Schulz and Shara Wagenknecht retweet relatively seldom in comparison with their rivals - an indication that theses politicans have exlusive access to their twitter account?</p>
+<p>Alice Weidel from the right-wing AfD has the least tweets so far, but she created her account only in February and her first tweet followed not until April.</p>
+</div>
+<div id="does-the-frequency-of-tweets-change-as-the-bundestagswahl-comes-closer" class="section level2">
+<h2>2. Does the frequency of tweets change as the Bundestagswahl comes closer?</h2>
+<p>In the first 4 month of this year, particularly Christian Lindner and Katrin Göring-Eckardt were the most active users. Göring-Eckardt wasn’t that active afterwards, whereas Lindner had a share of 50% in late April and mid-May. But the amount of tweets is not equivalent to recognition and approval, which we see in the next section.</p>
+<pre class="r"><code>tweets_2017 %&gt;%
+  mutate(screen_name = factor(screen_name, twitter_info$account_name)) %&gt;%
+  filter(is_retweet == FALSE) %&gt;%
+  count(screen_name, week = round_date(created_at, &quot;week&quot;)) %&gt;%
+  complete(screen_name, week, fill = list(n = 0)) %&gt;%
+  group_by(week) %&gt;%
+  mutate(percent = n / sum(n)) %&gt;%
+  mutate(maximum = cumsum(percent)) %&gt;%
+  mutate(minimum = lag(maximum, 1, 0)) %&gt;%
+  mutate(week_no = week(week)) %&gt;%
+  ggplot(aes(week, ymin = minimum, ymax = maximum, fill = screen_name)) +
+  geom_ribbon(color = &quot;grey&quot;) +
+  scale_x_datetime(date_breaks = &quot;2 weeks&quot;, date_labels = &quot;%d. %b&quot;) +
+  scale_fill_manual(values = twitter_info$party_color) +
+  coord_cartesian(expand = 0) +
+  scale_y_continuous(labels = scales::percent) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  labs(x = NULL, y = &quot;Percentage of own tweets&quot;, 
+       title =  &quot;Proportion of tweets from the party frontrunners&quot;, fill = NULL) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/tweet-history-1.png" width="672" /></p>
+</div>
+<div id="how-much-recognition-and-approval-do-the-candiates-receive" class="section level2">
+<h2>3. How much recognition and approval do the candiates receive?</h2>
+<p>How much recognition and approval a candiate gets can be measured by number of retweets and favs. Among the top 25 tweets with the most retweets, 18 come from Martin Schulz. With more than 5000 retweets his direct critic to Donald Trump on the United States’ withdrawal from the Paris climate change agreement ranks first on the list of tweets with the most reweets.</p>
+<pre class="r"><code>tweets_2017$text2 &lt;- iconv(tweets_2017$text, &quot;UTF-8&quot;, &quot;ASCII&quot;, sub=&quot;&quot;)
+
+df_plot &lt;- tweets_2017 %&gt;%
+  filter(is_retweet == FALSE) %&gt;%
+  arrange(desc(retweet_count)) %&gt;%
+  slice(1:25) %&gt;%
+  mutate(id = row_number()) %&gt;%
+  group_by(screen_name) %&gt;%
+  mutate(is_most_retweeted = row_number() == 1) %&gt;%
+  ungroup() %&gt;%
+  mutate(text2 = str_replace_all(text2,&quot;[^[:graph:]]&quot;, &quot; &quot;)) %&gt;%
+  mutate(text2 = str_c(&quot;\&quot;&quot;, text2, &quot;\&quot; (&quot;, format(created_at, &quot;%d.%m.&quot;), &quot;)&quot;)) %&gt;%
+  mutate(text2 = str_replace_all(text2, &quot;(.{1,60})(\\s|$)&quot;, &quot;\\1\n&quot;)) %&gt;%
+  mutate(screen_name = factor(screen_name, levels = twitter_info$account_name))
+
+ggplot(df_plot, aes(x = id, y = retweet_count, fill = screen_name)) +
+  geom_col(aes(color = is_most_retweeted, size = is_most_retweeted)) +
+  coord_flip() + 
+  scale_x_reverse(expand = c(.075,.075)) + 
+  scale_y_continuous(limits = c(0, max(df_plot$retweet_count) + 5000), expand = c(0,0)) +
+  scale_color_manual(values = c(NA, &quot;black&quot;)) +
+  scale_size_manual(values = c(0, .75)) +
+  scale_fill_manual(values = twitter_info$party_color[twitter_info$account_name %in% 
+                                                        unique(df_plot$screen_name)]) +
+  geom_text(data = df_plot %&gt;% filter(is_most_retweeted == TRUE),
+            aes(label = text2), hjust = 0, size = 2.55, nudge_y = 300, vjust = .5) +
+  guides(fill = guide_legend(&quot;&quot;), color = FALSE, size = FALSE) +
+  theme(axis.text.y = element_blank()) +
+  theme(axis.ticks.y = element_blank()) +
+  labs(x = NULL, y = &quot;Number of retweets&quot;, title = &quot;25 most retweeted tweets&quot;,
+       caption = &quot;Framed bar shows a candidate&#39;s most retweeted tweet&quot;)</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/retweets-1.png" width="576" /></p>
+<p>Also with regard to number of favs, the SPD politician ranks first by a large margin, followed by Christian Lindner. The portions are quite stable throughout the year, although Alice Weidel sorts herself on third place after her registration in April and consequently reduces the shares of the other politicians.</p>
+<pre class="r"><code>tweets_2017 %&gt;%
+  group_by(screen_name, month = floor_date(created_at, unit = &quot;month&quot;)) %&gt;%
+  summarize(favorite_count = sum(favorite_count)) %&gt;%
+  ungroup() %&gt;%
+  group_by(month) %&gt;%
+  mutate(favoritePerc = favorite_count / sum(favorite_count)) %&gt;%
+  inner_join(twitter_info, by = c(&quot;screen_name&quot; = &quot;account_name&quot;)) %&gt;%
+  mutate(screen_name = factor(screen_name, levels = rev(twitter_info$account_name))) %&gt;%
+  ggplot(aes(x = month, y = favoritePerc, fill = screen_name)) +
+  geom_area(color = &quot;grey&quot;) +
+  scale_x_datetime(expand = c(0,0)) +
+  scale_y_continuous(labels = scales::percent, expand = c(0,0)) +
+  scale_fill_manual(values = rev(twitter_info$party_color)) +
+  labs(x = NULL, y = &quot;Percentage of favs&quot;, fill = NULL,
+       title = &#39;Proportion of Favs&#39;)</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/favorites-1.png" width="672" /></p>
+</div>
+<div id="are-there-words-that-are-characteristic-for-a-politician" class="section level2">
+<h2>4. Are there words that are characteristic for a politician?</h2>
+<p>For this questions, we first perform a <a href="https://en.wikipedia.org/wiki/Lexical_analysis#Tokenization">word tokenisation</a>. Subsequently, we remove frequently used stop words like “and”, “but” and “my”. Furthermore, we filter words with at least 3 letters and remove <em>mentions</em> of other acounts, i.e. words that start with “@”. For example, during the state election campaign in North Rhine-Westphalia, Martin Schulz frequently mentioned the account name of the state’s former prime minister “<span class="citation">@HanneloreKraft</span>”.</p>
+<p>To extract a list of candiate-characteristic words, we calculate the <a href="https://en.wikipedia.org/wiki/Tf%E2%80%93idf">tf*idf</a> score for each word with respect to the twitter account. Words exibit a very high tf*idf score, if they are frequently used from a particular politican and seldom (or not at all) by the others.</p>
+<pre class="r"><code>unnest_reg &lt;- &quot;([^A-Za-zäöüÄÖÜß_\\d#@&#39;]|&#39;(?![A-Za-zäöüÄÖÜß_\\d#@]))&quot;
+
+tidy_tweets &lt;- tweets_2017 %&gt;%
+  filter(is_retweet == FALSE) %&gt;%
+  unnest_tokens(word, text, token = &quot;regex&quot;, pattern = unnest_reg) %&gt;% #, pattern = reg
+  filter(!word %in% stopwords(&quot;german&quot;)) %&gt;%
+  filter(!word %in% stop_words$word)
+
+tidy_tweets %&gt;%
+  count(screen_name, word) %&gt;%
+  ungroup() %&gt;%
+  bind_tf_idf(word, screen_name, n) %&gt;%
+  filter(nchar(word) &gt; 2) %&gt;%
+  filter(str_detect(word, &quot;^@&quot;) == FALSE) %&gt;%
+  arrange(screen_name, desc(tf_idf)) %&gt;%
+  group_by(screen_name) %&gt;%
+  slice(1:15) %&gt;%
+  ungroup() %&gt;%
+  mutate(screen_name = factor(screen_name, levels = twitter_info$account_name)) %&gt;%
+  mutate(word = factor(word, levels = rev(unique(word)))) %&gt;%
+  ggplot(aes(x = word, y = tf_idf, fill = screen_name)) +
+  geom_col() +
+  scale_fill_manual(values = twitter_info$party_color) +
+  facet_wrap(~screen_name, scales = &quot;free&quot;, ncol = 1) +
+  coord_flip() +
+  guides(fill = FALSE) +
+  labs(x = NULL, y = &quot;tf-idf&quot;)</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/top-words-1.png" width="480" /></p>
+<p>The words “kämpft” (fights), “schockiert” (shocked), “telefoniert” (phoned) and “investieren” (invest) are characteristic for Schulz. He uses the word “angehörigen” (relatives) often in the the expression of his condolences with the dependants of victims, for example in context of the terror attacks in London, Manchester, Barcelona, Stockholm and Hamburg. Furter, Schulz often attacks US president Donald Trump, either because of his reaction to the white supremacist rally in Charlottesville his plans to build a wall at the Mexican border, or, as mentioned above, the withdrawal of the USA from the Paris climate change agreement. Noticably, Schulz rarely uses hashtags, in contrast to his rivals.</p>
+<p>Sahra Wagenknecht uses her Twitter account clearly as platform to critizise the German government. She takes up issues like autobahn privatization, arms exports, military interventions, lobbyism and the German administration’s way of dealing with the Turkish president Erdogan. Her “oppositional” tweets contain a lot of negatively connotated words, such as “Abzocke” (rip-off/fraud) and “Hintertür” (backdoor) which we examine shortly.</p>
+<p>The green politicians Göring-Eckardt and Özdemir frequently address typically ecologic issues like environment, climate protection and e-mobility. Similar to Lindner and Weidel, both include election campaign slogans in their tweets, for example “Zukunft wird aus Mut gemacht” (future is made of courage), “Gerechtigkeit im Sinn” (fairness in mind), “Es geht um unser Land” (it’s about our country) and “Trau dich Deutschland” (Be courageous, Germany).</p>
+</div>
+<div id="which-politician-is-polarizing-i.e.-incorporates-many-positive-or-negative-words" class="section level2">
+<h2>5. Which politician is polarizing, i.e., incorporates many <em>positive</em> or <em>negative</em> words?</h2>
+<p>To answer our fifth question, we leverage a <a href="http://www.ulliwaltinger.de/sentiment/">German sentiment dictionary</a> to assign each word a polarity score, either +1 for positive, 0 for neutral or -1 for negative, and calculate the mean over all words written by a politician per month.</p>
+<pre class="r"><code>polarity &lt;- c(&quot;http://www.ulliwaltinger.de/sentiment/GermanPolarityClues-2012/GermanPolarityClues-Negative-21042012.tsv.txt&quot;,
+              &quot;http://www.ulliwaltinger.de/sentiment/GermanPolarityClues-2012/GermanPolarityClues-Positive-21042012.tsv.txt&quot;) %&gt;%
+  map(function(x) {
+    read_delim(x, delim = &quot;\t&quot;, col_names = c(&quot;feature&quot;, &quot;lemma&quot;, &quot;pos&quot;, &quot;polarity&quot;, &quot;probability&quot;, &quot;unknown&quot;)) %&gt;%
+      select(&quot;feature&quot;, &quot;lemma&quot;, &quot;polarity&quot;) %&gt;%
+      mutate(polarity_score = case_when(polarity == &quot;negative&quot; ~ -1,
+                                        polarity == &quot;positive&quot; ~ 1,
+                                        TRUE ~ 0)) %&gt;%
+      mutate(feature = tolower(feature)) %&gt;%
+      mutate(lemma = tolower(lemma))
+  }) %&gt;% bind_rows()
+
+tidy_tweets %&gt;%
+  inner_join(polarity, by = c(&quot;word&quot; = &quot;feature&quot;)) %&gt;%
+  group_by(screen_name, month = floor_date(created_at, &quot;month&quot;)) %&gt;%
+  summarize(average_sentiment = mean(polarity_score),#) %&gt;%#,
+            num_words = n()) %&gt;%
+  ungroup() %&gt;%
+  inner_join(twitter_info, by = c(&quot;screen_name&quot; = &quot;account_name&quot;)) %&gt;%
+  mutate(screen_name = factor(screen_name, levels = twitter_info$account_name)) %&gt;%
+  ggplot(aes(x = month, y = average_sentiment, color = screen_name)) +
+  geom_line(linetype = 3) + geom_point() +
+  geom_hline(yintercept = 0, color = &quot;black&quot;) +
+  scale_color_manual(values = twitter_info$party_color) +
+  labs(x = NULL, color = NULL, y = &quot;Average polarity&quot;,
+       title = &quot;Average polarity score&quot;)</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/polarity-1.png" width="480" /></p>
+<p>Both candidates of The Left Party, Bartsch and in particular Wagenknecht, use explicitly more negative language than the others. Wagenknecht uses words like “endlich” (eventually), “müssen” (must), “beenden” (end/finish), “krieg” (war), “abzocke” (fraud/rip-off), “anti”, “nein” (no), “peinlich” (embarrasing) oder “schlecht” (bad), Bartsch u.a. “armut” (poverty), “bedrohen” (threaten), “verletzt” (hurt) und “blödsinn” (nonsense). While the high average polarity score of the right conservative AfD nominee Weidel in April stands out, it is also the month of her first tweets, and caused by using positive words like “dank” (thank), “freuen” (delight) and “gemeinsam” (together). From the second month on, her language became slightly more negative and was in the range of her opponents from SPD, Green Party and FDP.</p>
+</div>
+<div id="which-politicians-are-similar-with-respect-to-their-word-usage" class="section level2">
+<h2>6. Which politicians are similar with respect to their word usage?</h2>
+<p>To be honest, the question of who will be the winner of the coming national election doesn’t really arise. Current polls predict a big margin for the union of CDU/CSU, led by chancellor Merkel, over their nearest challengers from Schulz’ SPD. However, it is unlikely that Merkels party will obtain the absolute majority in the popular vote, so they will probably have to strike up a coalition with another party. So the more exciting question is not who will win but rather which group of parties will form a government coalition for the next legislation period? Will it be another “Great coalition” (CDU/CSU + SPD), will we see a comeback of the FDP which missed the 5% threshold at the last national elections or will we see the first three-way alliance in the history with “Jamaica” (CDU/CSU + Green + FDP) or “Rot-Rot-Grün” (SPD + Left + Green)?</p>
+<p>Ideally, the parties with the highest intersection in their programs form a coalition with each other. Obviously, the parties’ frontrunners have a big impact on the outcome of coalition negotiations. Based on the similarity of word usage in their tweets, are we capable of deriving pairs of parties that are most likely to form a coalition with each other?</p>
+<p>To assess similarity between politicians, we employ the <a href="https://en.wikipedia.org/wiki/Pearson_correlation_coefficient">Pearson correlation coefficient</a>: broadly, two politicians are similar if both use the same words similarly often or seldom and thus have a high correlation score. The score ranges between -1 (negative correlation) and +1 (positive correlation), with 0 being uncorrelated.</p>
+<pre class="r"><code>tidy_tweets %&gt;%
+  inner_join(polarity, by = c(&quot;word&quot; = &quot;feature&quot;)) %&gt;%
+  mutate(screen_name = factor(screen_name, levels = twitter_info$account_name)) %&gt;%
+  count(screen_name, lemma) %&gt;%
+  pairwise_cor(screen_name, lemma, n, diag = TRUE) %&gt;%
+  mutate(no_1 = as.integer(item1)) %&gt;%
+  mutate(no_2 = as.integer(item2)) %&gt;%
+  filter(no_1 &lt;= no_2) %&gt;% 
+  ggplot(aes(item1, fct_rev(item2), fill = correlation)) +
+  geom_tile() +
+  geom_text(aes(label = round(correlation, 2))) +
+  scale_x_discrete(expand = c(0,0)) +
+  scale_y_discrete(expand = c(0,0)) +
+  scale_fill_gradient(name = expression(phi * &quot; coefficient&quot;), low = &quot;#FFFAEB&quot;, high = &quot;steelblue&quot;) +
+  theme(legend.position = c(.9,.9)) +
+  theme(legend.justification = c(1,1)) +
+  theme(axis.text.x = element_text(angle = 25, hjust = 1)) +
+  labs(x = NULL, y = NULL, title = &quot;Correlation between politicians based on word usage&quot;)</code></pre>
+<p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/correlation-1.png" width="480" /></p>
+<p>Noticably, the correlation matrix mirrors what we could have expected if we take the party memberships of the candiates into account. With a score of .86, the Green politicians Göring-Eckardt and Özdemir are most similar. Both are similar to Schulz and different to Weidel. The high score between Göring-Eckardt and Lindner is maybe surprising. Interestingly, the correlation coefficient between Bartsch and Wagenknecht is Bartsch’s second lowest score. This is indicative that the party pursued a two-fold strategy, on the one hand addressing the moderate wing with the nomination of Bartsch and covering the left wing with the nomination of Wagenknecht. The matrix also shows that there is litte chance of a coalition between AfD an the Left Party.</p>
+<pre class="r"><code>tidy_tweets %&gt;%
+  inner_join(polarity, by = c(&quot;word&quot; = &quot;feature&quot;)) %&gt;%
+  count(screen_name, lemma) %&gt;%
+  pairwise_cor(screen_name, lemma, n, diag = TRUE) %&gt;%
+  group_by(item1) %&gt;%
+  summarize(sum_cor = sum(correlation)) %&gt;%
+  arrange(desc(sum_cor)) %&gt;%
+  rename(candidate = item1, sum_cor_coef = sum_cor)</code></pre>
+<pre><code>## # A tibble: 7 x 2
+##        candidate sum_cor_coef
+##            &lt;chr&gt;        &lt;dbl&gt;
+## 1 GoeringEckardt     5.040538
+## 2   cem_oezdemir     4.806151
+## 3   MartinSchulz     4.614397
+## 4      c_lindner     4.475750
+## 5 DietmarBartsch     4.104599
+## 6   SWagenknecht     3.694020
+## 7   Alice_Weidel     3.618129</code></pre>
+<p>Looking at the sum of pairwise correlation coefficients, we see tht politicans from the political center show higher values than the left and right candidates. Consequently, SPD, Green, and FDP have theoretically multiple coaltion options. I found it very interesting to connect Tweets from party representatives to potential government coalition constellations…</p>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 3.4.1 (2017-06-30)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows 10 x64 (build 15063)
+## 
+## Matrix products: default
+## 
+## locale:
+## [1] LC_COLLATE=German_Germany.1252  LC_CTYPE=German_Germany.1252   
+## [3] LC_MONETARY=German_Germany.1252 LC_NUMERIC=C                   
+## [5] LC_TIME=German_Germany.1252    
+## 
+## attached base packages:
+## [1] methods   stats     graphics  grDevices utils     datasets  base     
+## 
+## other attached packages:
+##  [1] bindrcpp_0.2     widyr_0.1.0      tm_0.7-1         NLP_0.1-11      
+##  [5] tidytext_0.1.3   extrafont_0.17   ggplot2bdc_0.3.2 ggimage_0.0.4   
+##  [9] EBImage_4.19.8   rtweet_0.4.8     forcats_0.2.0    stringr_1.2.0   
+## [13] lubridate_1.6.0  dplyr_0.7.2      purrr_0.2.3      readr_1.1.1     
+## [17] tidyr_0.7.0      tibble_1.3.4     ggplot2_2.2.1    tidyverse_1.1.1 
+## 
+## loaded via a namespace (and not attached):
+##  [1] httr_1.3.1          bit64_0.9-7         jsonlite_1.5       
+##  [4] modelr_0.1.1        assertthat_0.2.0    cellranger_1.1.0   
+##  [7] tiff_0.1-5          slam_0.1-40         yaml_2.1.14        
+## [10] Rttf2pt1_1.3.4      backports_1.1.0     lattice_0.20-35    
+## [13] glue_1.1.1          extrafontdb_1.0     digest_0.6.12      
+## [16] rvest_0.3.2         colorspace_1.3-2    htmltools_0.3.6    
+## [19] Matrix_1.2-10       plyr_1.8.4          psych_1.7.5        
+## [22] pkgconfig_2.0.1     broom_0.4.2         haven_1.1.0        
+## [25] bookdown_0.5        fftwtools_0.9-8     scales_0.4.1       
+## [28] jpeg_0.1-8          openssl_0.9.6       BiocGenerics_0.22.0
+## [31] lazyeval_0.2.0      mnormt_1.5-5        magrittr_1.5       
+## [34] readxl_1.0.0        evaluate_0.10.1     tokenizers_0.1.4   
+## [37] janeaustenr_0.1.5   nlme_3.1-131        SnowballC_0.5.1    
+## [40] xml2_1.1.1          foreign_0.8-69      blogdown_0.1       
+## [43] tools_3.4.1         hms_0.3             munsell_0.4.3      
+## [46] locfit_1.5-9.1      compiler_3.4.1      gridGraphics_0.2   
+## [49] rlang_0.1.2         grid_3.4.1          RCurl_1.95-4.8     
+## [52] htmlwidgets_0.9     labeling_0.3        bitops_1.0-6       
+## [55] rmarkdown_1.6       gtable_0.2.0        curl_2.8.1         
+## [58] abind_1.4-5         reshape2_1.4.2      R6_2.2.2           
+## [61] knitr_1.17          bit_1.1-12          bindr_0.1          
+## [64] rprojroot_1.2       stringi_1.1.5       parallel_3.4.1     
+## [67] Rcpp_0.12.12        png_0.1-7           tidyselect_0.1.1</code></pre>
+</div>
