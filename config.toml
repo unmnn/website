@@ -1,6 +1,6 @@
 ## Basic Configuration
 
-baseurl = "http://www.uliniemann.de/" 
+baseurl = "http://uliniemann.de/" 
 builddrafts = false
 canonifyurls = false
 languageCode = "en-US"
