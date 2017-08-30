@@ -144,7 +144,7 @@ ggplot(df_plot, aes(x = screen_name, fill = screen_name)) +
        subtitle = str_c(&quot;retweets semi-transparent&quot;)) +
   theme(plot.caption = element_text(hjust = 0))</code></pre>
 <p><img src="/blog/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/tweet-count-1.png" width="672" /></p>
-<p>It seems as if Christian Lindner is the most diligent tweeter, followed by Katrin Göring-Eckardt and Cem Özdemir. But wait a second: has the party leader of the FDP really sent over 900 tweets and retweeted more than 1000 times within 241 days of 2017? Looking at his profile page it becomes apparent that not all tweets are written by himself. Lindner closes his own short messages with his acronym <em>“CL”</em> while tweets from his team are tagged with the abbreviation <em>“TL”</em>. Besides Linder, Göring-Eckardts account is also supported by an editorial team. Approximatly 48% of Linder’s tweets are written by his staff. The respective number is ca. 23% for Göring-Eckardt. We can assume that a considerable number of retweets are also not sent by the politicians themselves.</p>
+<p>It seems as if Christian Lindner is the most diligent tweeter, followed by Katrin Göring-Eckardt and Cem Özdemir. But wait a second: has the party leader of the FDP really sent over 900 tweets and retweeted more than 1000 times within 242 days of 2017? Looking at his profile page it becomes apparent that not all tweets are written by himself. Lindner closes his own short messages with his acronym <em>“CL”</em> while tweets from his team are tagged with the abbreviation <em>“TL”</em>. Besides Linder, Göring-Eckardts account is also supported by an editorial team. Approximatly 48% of Linder’s tweets are written by his staff. The respective number is ca. 23% for Göring-Eckardt. We can assume that a considerable number of retweets are also not sent by the politicians themselves.</p>
 <div class="figure">
 <img src="img/lindner_ges.png" />
 
@@ -343,11 +343,9 @@ tidy_tweets %&gt;%
 ## 7   Alice_Weidel     3.618129</code></pre>
 <p>Looking at the sum of pairwise correlation coefficients, we see tht politicans from the political center show higher values than the left and right candidates. Consequently, SPD, Green, and FDP have theoretically multiple coaltion options. I found it very interesting to connect Tweets from party representatives to potential government coalition constellations…</p>
 <pre class="r"><code>sessionInfo()</code></pre>
-<pre><code>## R version 3.4.1 (2017-06-30)
+<pre><code>## R version 3.3.1 (2016-06-21)
 ## Platform: x86_64-w64-mingw32/x64 (64-bit)
 ## Running under: Windows 10 x64 (build 15063)
-## 
-## Matrix products: default
 ## 
 ## locale:
 ## [1] LC_COLLATE=German_Germany.1252  LC_CTYPE=German_Germany.1252   
@@ -368,24 +366,24 @@ tidy_tweets %&gt;%
 ##  [1] httr_1.3.1          bit64_0.9-7         jsonlite_1.5       
 ##  [4] modelr_0.1.1        assertthat_0.2.0    cellranger_1.1.0   
 ##  [7] tiff_0.1-5          slam_0.1-40         yaml_2.1.14        
-## [10] Rttf2pt1_1.3.4      backports_1.1.0     lattice_0.20-35    
+## [10] Rttf2pt1_1.3.4      backports_1.1.0     lattice_0.20-33    
 ## [13] glue_1.1.1          extrafontdb_1.0     digest_0.6.12      
 ## [16] rvest_0.3.2         colorspace_1.3-2    htmltools_0.3.6    
-## [19] Matrix_1.2-10       plyr_1.8.4          psych_1.7.5        
+## [19] Matrix_1.2-6        plyr_1.8.4          psych_1.7.5        
 ## [22] pkgconfig_2.0.1     broom_0.4.2         haven_1.1.0        
-## [25] bookdown_0.5        fftwtools_0.9-8     scales_0.4.1       
-## [28] jpeg_0.1-8          openssl_0.9.6       BiocGenerics_0.22.0
+## [25] bookdown_0.5        fftwtools_0.9-8     scales_0.5.0       
+## [28] jpeg_0.1-8          openssl_0.9.6       BiocGenerics_0.20.0
 ## [31] lazyeval_0.2.0      mnormt_1.5-5        magrittr_1.5       
 ## [34] readxl_1.0.0        evaluate_0.10.1     tokenizers_0.1.4   
 ## [37] janeaustenr_0.1.5   nlme_3.1-131        SnowballC_0.5.1    
 ## [40] xml2_1.1.1          foreign_0.8-69      blogdown_0.1       
-## [43] tools_3.4.1         hms_0.3             munsell_0.4.3      
-## [46] locfit_1.5-9.1      compiler_3.4.1      gridGraphics_0.2   
-## [49] rlang_0.1.2         grid_3.4.1          RCurl_1.95-4.8     
-## [52] htmlwidgets_0.9     labeling_0.3        bitops_1.0-6       
-## [55] rmarkdown_1.6       gtable_0.2.0        curl_2.8.1         
-## [58] abind_1.4-5         reshape2_1.4.2      R6_2.2.2           
-## [61] knitr_1.17          bit_1.1-12          bindr_0.1          
-## [64] rprojroot_1.2       stringi_1.1.5       parallel_3.4.1     
-## [67] Rcpp_0.12.12        png_0.1-7           tidyselect_0.1.1</code></pre>
+## [43] tools_3.3.1         hms_0.3             munsell_0.4.3      
+## [46] locfit_1.5-9.1      gridGraphics_0.2    rlang_0.1.2        
+## [49] grid_3.3.1          RCurl_1.95-4.8      htmlwidgets_0.9    
+## [52] labeling_0.3        bitops_1.0-6        rmarkdown_1.6      
+## [55] gtable_0.2.0        curl_2.8.1          abind_1.4-5        
+## [58] reshape2_1.4.2      R6_2.2.2            knitr_1.17         
+## [61] bit_1.1-12          bindr_0.1           rprojroot_1.2      
+## [64] stringi_1.1.5       parallel_3.3.1      Rcpp_0.12.12       
+## [67] png_0.1-7           tidyselect_0.1.1</code></pre>
 </div>
