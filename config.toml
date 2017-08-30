@@ -17,7 +17,7 @@ title = "Uli Niemann"
 theme = "hugo-goa"
 
 ## Hugo Built-in Features
-disqusShortname = "uli_niemann" # Comment out to disable Disqus.
+disqusShortname = "uliniemann" # Comment out to disable Disqus.
 googleAnalytics = "XYZ"
 enableRobotsTXT = true
 
