@@ -25,7 +25,7 @@ enableRobotsTXT = true
 [params]
 author = "Uli Niemann"
 intro = "SITE UNDER CONSTRUCTION"
-description = "lorem ipsum"
+description = "lorem ipsum lorem ipsum"
 authorimage = "uli.jpg"
 dateformat = "Jan 2, 2006"
 
