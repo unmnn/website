@@ -5,29 +5,29 @@ sidemenu = "true"
 description = "How to contact me"
 +++
 
-<form class="pure-form pure-form-stacked">
+<form class="pure-form pure-form-stacked" method="POST" action="https://formspree.io/uli.niemann.1@gmail.com">
   <fieldset>
     <div class="pure-g">
       <div class="pure-u-1 pure-u-md-1-3">
         <label for="first-name">First Name</label>
-        <input id="first-name" class="pure-u-23-24" type="text">
+        <input id="first-name" name="first-name" class="pure-u-23-24" type="text">
       </div>
 
       <div class="pure-u-1 pure-u-md-1-3">
         <label for="last-name">Last Name</label>
-        <input id="last-name" class="pure-u-23-24" type="text">
+        <input id="last-name" name="last-name" class="pure-u-23-24" type="text">
       </div>
 
       <div class="pure-u-1 pure-u-md-1-3">
         <label for="email">E-Mail</label>
-        <input id="email" class="pure-u-23-24" type="email" required>
+        <input id="email" name="email" class="pure-u-23-24" type="email" required>
       </div>
 
     </div>
     <fieldset class="pure-group">
-      <input type="text" class="pure-input-1-2" placeholder="A title">
-      <textarea class="pure-input-1-2" placeholder="Your message"></textarea>
+      <textarea name="title" class="pure-input-1-2" placeholder="A title"></textarea>
+      <textarea name="message" class="pure-input-1-2" placeholder="Your message"></textarea>
     </fieldset>
-    <button type="submit" class="pure-button pure-button-primary">Send</button>
+    <input type="submit" value="Send" class="pure-button pure-button-primary">
   </fieldset>
 </form>
