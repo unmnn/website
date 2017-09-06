@@ -1,4 +1,4 @@
-baseurl = "http://uliniemann.de/" 
+baseurl = "https://uliniemann.de/" 
 languageCode = "en-us"
 title = "Uli Niemann"
 theme = "blackburn"
