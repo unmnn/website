@@ -1,9 +1,9 @@
-baseurl = "http://uliniemann.de/" 
+baseurl = "https://www.example.com/"
 languageCode = "en-us"
-title = "Uli Niemann"
+title = "Blackburn Theme Demo"
 theme = "blackburn"
-author = "Uli Niemann"
-copyright = "&copy; 2017 Uli Niemann. Built with <a href=\"https://gohugo.io/\">Hugo</a> using the <a href=\"https://github.com/yoshiharuyamashita/blackburn\">blackburn</a> theme."
+author = "Yoshiharu Yamashita"
+copyright = "&copy; 2016. All rights reserved."
 canonifyurls = true
 paginate = 10
 
@@ -13,12 +13,12 @@ paginate = 10
 
 [params]
   # Shown in the home page
-  subtitle = ""
-  brand = "uliniemann.de"
+  subtitle = "A Hugo Theme"
+  brand = "Blackburn"
   googleAnalytics = "Your Google Analytics tracking ID"
-  disqus = "uliniemann"
+  disqus = "Your Disqus shortname"
   # CSS name for highlight.js
-  highlightjs = "zenburn"
+  highlightjs = "androidstudio"
   dateFormat = "02 Jan 2006, 15:04"
 
 [menu]
@@ -50,9 +50,9 @@ paginate = 10
 [social]
   # Link your social networking accouns to the side menu
   # by entering your username or ID.
-  #twitter = "*"
-  #facebook = "*"
-  #instagram = "*"
-  #github = "unmnn"
-  #stackoverflow = "*"
-  #linkedin = "*"
+  twitter = "*"
+  facebook = "*"
+  instagram = "*"
+  github = "yoshiharuyamashita"
+  stackoverflow = "*"
+  linkedin = "*"

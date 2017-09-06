@@ -1,0 +1,69 @@
+## Basic Configuration
+
+baseurl = "http://uliniemann.de/" 
+builddrafts = false
+canonifyurls = false
+languageCode = "en-US"
+
+ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_files$", "_cache$", "\\.rds"]
+
+contentdir = "content"
+layoutdir = "layouts"
+publishdir = "public"
+
+author = "Uli Niemann"
+title = "Uli Niemann"
+
+theme = "hugo-goa"
+
+## Hugo Built-in Features
+disqusShortname = "uliniemann" # Comment out to disable Disqus.
+googleAnalytics = "XYZ"
+enableRobotsTXT = true
+
+## Site Settings
+[params]
+author = "Uli Niemann"
+intro = "SITE UNDER CONSTRUCTION"
+description = "lorem ipsum lorem ipsum"
+authorimage = "uli.jpg"
+dateformat = "Jan 2, 2006"
+
+## Site Meta Settings
+[params.meta]
+description = "Simple minimalist theme"
+keywords = "minimalist,blog,goa,hugo,developer"
+
+## Social Accounts
+[params.social]
+github = "unmnn"
+# instagram = "<username>"
+# linkedin = "<username>"
+# twitter = "<username>"
+# facebook = "<username>"
+# google = "<username>"
+# stackoverflow = "<username>"
+email = "uli.niemann.1@gmail.com"
+
+## Extras
+[params.extra]
+copyright = "© 2017 Uli Niemann." 
+poweredby = true
+hightlightjs = true
+
+## Main Menu
+[[menu.main]]
+    name = "blog"
+    weight = 100
+    identifier = "blog"
+    url = "/blog/"
+[[menu.main]]
+    name = "about"
+    identifier = "about"
+    weight = 200
+    url = "/about/"
+[[menu.main]]
+    name = "coderag"
+    identifier = "coderag"
+    weight = 300
+    url = "/coderag/"
