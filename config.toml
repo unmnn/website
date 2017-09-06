@@ -15,7 +15,7 @@ paginate = 10
   # Shown in the home page
   subtitle = ""
   brand = "uliniemann.de"
-  googleAnalytics = "Your Google Analytics tracking ID"
+  googleAnalytics = "UA-106006320-1"
   disqus = "uliniemann"
   # CSS name for highlight.js
   highlightjs = "zenburn"
