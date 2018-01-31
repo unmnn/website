@@ -24,7 +24,9 @@ The files are organized in a folder structure where each weather station has its
 
 <!-- `r knitr::asis_output("\u2764")` -->
 
-![](img/dwd_ftp.png)
+```{r figure_dwd, eval=TRUE, echo=FALSE}
+knitr::include_graphics("img/dwd_ftp.png")
+```
 
 First, we load all required libraries. Then, we browse to the subfolder `observations_germany/climate/daily/kl/recent/` to examine a text file that contains meta information for each weather station, i. e., its ID, location, height, longitude & latitude, and the German state (Bundesland) where its located. Unfortunately, the file columns are rather awkwardly delimited (no csv style or similar) which means that we have to painfully parse each line by exact character positions.
 
@@ -136,7 +138,10 @@ temperature_data_st %>% write_rds("temperature_data_saxony_anhalt.rds")
 
 As mentioned in the beginning, the data are visualized in this small [R Shiny app](https://rbsenzaehler.shinyapps.io/Shiny_Temps_Saxony_Anhalt/).  
 
-![](img/shiny_app_temps_st_screenshot.png)
+```{r figure_shiny_screenshot, eval=TRUE, echo=FALSE}
+knitr::include_graphics("img/shiny_app_temps_st_screenshot.png")
+```
+
 
 ```{r session-info}
 sessionInfo()
