@@ -42,7 +42,7 @@ library(lubridate)
 library(stringr)
 library(forcats)
 library(rtweet)
-library(EBImage)
+# library(EBImage)
 library(ggimage)
 library(ggplot2bdc)
 library(extrafont)
@@ -148,9 +148,9 @@ ggplot(df_plot, aes(x = screen_name, fill = screen_name)) +
        subtitle = str_c(&quot;retweets semi-transparent&quot;)) +
   theme(plot.caption = element_text(hjust = 0))</code></pre>
 <p><img src="/post/2017/170829_twitter_btw/170829_twitter_btw_files/figure-html/tweet-count-1.png" width="672" /></p>
-<p>It seems as if Christian Lindner is the most diligent tweeter, followed by Katrin Göring-Eckardt and Cem Özdemir. But wait a second: has the party leader of the FDP really sent over 900 tweets and retweeted more than 1000 times within 249 days of 2017? Looking at his profile page it becomes apparent that not all tweets are written by himself. Lindner closes his own short messages with his acronym <em>“CL”</em> while tweets from his team are tagged with the abbreviation <em>“TL”</em>. Besides Linder, Göring-Eckardts account is also supported by an editorial team. Approximatly 48% of Linder’s tweets are written by his staff. The respective number is ca. 23% for Göring-Eckardt. We can assume that a considerable number of retweets are also not sent by the politicians themselves.</p>
+<p>It seems as if Christian Lindner is the most diligent tweeter, followed by Katrin Göring-Eckardt and Cem Özdemir. But wait a second: has the party leader of the FDP really sent over 900 tweets and retweeted more than 1000 times within 31 days of 2017? Looking at his profile page it becomes apparent that not all tweets are written by himself. Lindner closes his own short messages with his acronym <em>“CL”</em> while tweets from his team are tagged with the abbreviation <em>“TL”</em>. Besides Linder, Göring-Eckardts account is also supported by an editorial team. Approximatly 48% of Linder’s tweets are written by his staff. The respective number is ca. 23% for Göring-Eckardt. We can assume that a considerable number of retweets are also not sent by the politicians themselves.</p>
 <div class="figure">
-<img src="/img/lindner_ges.png" />
+<img src="img/lindner_ges.png" />
 
 </div>
 <p>Noticably, Martin Schulz and Shara Wagenknecht retweet relatively seldom in comparison with their rivals - an indication that theses politicans have exlusive access to their twitter account?</p>
@@ -347,9 +347,11 @@ tidy_tweets %&gt;%
 ## 7   Alice_Weidel     3.618129</code></pre>
 <p>Looking at the sum of pairwise correlation coefficients, we see tht politicans from the political center show higher values than the left and right candidates. Consequently, SPD, Green, and FDP have theoretically multiple coaltion options. I found it very interesting to connect Tweets from party representatives to potential government coalition constellations…</p>
 <pre class="r"><code>sessionInfo()</code></pre>
-<pre><code>## R version 3.3.1 (2016-06-21)
+<pre><code>## R version 3.4.1 (2017-06-30)
 ## Platform: x86_64-w64-mingw32/x64 (64-bit)
-## Running under: Windows 10 x64 (build 15063)
+## Running under: Windows 10 x64 (build 16299)
+## 
+## Matrix products: default
 ## 
 ## locale:
 ## [1] LC_COLLATE=German_Germany.1252  LC_CTYPE=German_Germany.1252   
@@ -360,34 +362,32 @@ tidy_tweets %&gt;%
 ## [1] methods   stats     graphics  grDevices utils     datasets  base     
 ## 
 ## other attached packages:
-##  [1] bindrcpp_0.2     widyr_0.1.0      tm_0.7-1         NLP_0.1-11      
-##  [5] tidytext_0.1.3   extrafont_0.17   ggplot2bdc_0.3.2 ggimage_0.0.4   
-##  [9] EBImage_4.19.8   rtweet_0.4.8     forcats_0.2.0    stringr_1.2.0   
-## [13] lubridate_1.6.0  dplyr_0.7.2      purrr_0.2.3      readr_1.1.1     
-## [17] tidyr_0.7.0      tibble_1.3.4     ggplot2_2.2.1    tidyverse_1.1.1 
+##  [1] bindrcpp_0.2     widyr_0.1.0      tm_0.7-3         NLP_0.1-11      
+##  [5] tidytext_0.1.6   extrafont_0.17   ggplot2bdc_0.3.2 ggimage_0.1.0   
+##  [9] rtweet_0.6.0     lubridate_1.7.1  forcats_0.2.0    stringr_1.2.0   
+## [13] dplyr_0.7.4      purrr_0.2.4      readr_1.1.1      tidyr_0.7.2     
+## [17] tibble_1.3.4     ggplot2_2.2.1    tidyverse_1.2.1  blogdown_0.3    
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] httr_1.3.1          bit64_0.9-7         jsonlite_1.5       
-##  [4] modelr_0.1.1        assertthat_0.2.0    cellranger_1.1.0   
-##  [7] tiff_0.1-5          slam_0.1-40         yaml_2.1.14        
-## [10] Rttf2pt1_1.3.4      backports_1.1.0     lattice_0.20-33    
-## [13] glue_1.1.1          extrafontdb_1.0     digest_0.6.12      
-## [16] rvest_0.3.2         colorspace_1.3-2    htmltools_0.3.6    
-## [19] Matrix_1.2-6        plyr_1.8.4          psych_1.7.5        
-## [22] pkgconfig_2.0.1     broom_0.4.2         haven_1.1.0        
-## [25] bookdown_0.5        fftwtools_0.9-8     scales_0.5.0       
-## [28] jpeg_0.1-8          openssl_0.9.6       BiocGenerics_0.20.0
-## [31] lazyeval_0.2.0      mnormt_1.5-5        magrittr_1.5       
-## [34] readxl_1.0.0        evaluate_0.10.1     tokenizers_0.1.4   
-## [37] janeaustenr_0.1.5   nlme_3.1-131        SnowballC_0.5.1    
-## [40] xml2_1.1.1          foreign_0.8-69      blogdown_0.1       
-## [43] tools_3.3.1         hms_0.3             munsell_0.4.3      
-## [46] locfit_1.5-9.1      gridGraphics_0.2    rlang_0.1.2        
-## [49] grid_3.3.1          RCurl_1.95-4.8      htmlwidgets_0.9    
-## [52] labeling_0.3        bitops_1.0-6        rmarkdown_1.6      
-## [55] gtable_0.2.0        curl_2.8.1          abind_1.4-5        
-## [58] reshape2_1.4.2      R6_2.2.2            knitr_1.17         
-## [61] bit_1.1-12          bindr_0.1           rprojroot_1.2      
-## [64] stringi_1.1.5       parallel_3.3.1      Rcpp_0.12.12       
-## [67] png_0.1-7           tidyselect_0.1.1</code></pre>
+##  [1] Rcpp_0.12.14      lattice_0.20-35   assertthat_0.2.0 
+##  [4] rprojroot_1.2     digest_0.6.14     psych_1.7.8      
+##  [7] slam_0.1-42       R6_2.2.2          cellranger_1.1.0 
+## [10] plyr_1.8.4        backports_1.1.1   evaluate_0.10.1  
+## [13] httr_1.3.1        rlang_0.1.4       curl_3.0         
+## [16] lazyeval_0.2.1    readxl_1.0.0      rstudioapi_0.7   
+## [19] extrafontdb_1.0   magick_1.5        Matrix_1.2-10    
+## [22] rmarkdown_1.8     labeling_0.3      foreign_0.8-69   
+## [25] munsell_0.4.3     broom_0.4.2       compiler_3.4.1   
+## [28] janeaustenr_0.1.5 modelr_0.1.1      pkgconfig_2.0.1  
+## [31] gridGraphics_0.2  mnormt_1.5-5      htmltools_0.3.6  
+## [34] tidyselect_0.2.3  openssl_0.9.9     bookdown_0.5     
+## [37] crayon_1.3.4      SnowballC_0.5.1   grid_3.4.1       
+## [40] nlme_3.1-131      jsonlite_1.5      Rttf2pt1_1.3.4   
+## [43] gtable_0.2.0      magrittr_1.5      scales_0.5.0     
+## [46] tokenizers_0.1.4  cli_1.0.0         stringi_1.1.6    
+## [49] reshape2_1.4.3    xml2_1.1.1        rvcheck_0.0.9    
+## [52] tools_3.4.1       glue_1.1.1        hms_0.3          
+## [55] parallel_3.4.1    yaml_2.1.14       colorspace_1.3-2 
+## [58] rvest_0.3.2       knitr_1.18        bindr_0.1        
+## [61] haven_1.1.0</code></pre>
 </div>

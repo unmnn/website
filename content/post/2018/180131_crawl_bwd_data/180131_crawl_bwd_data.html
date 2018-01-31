@@ -1,0 +1,179 @@
+---
+title: "How to systematically download weather data from the German Meteorologica Service with R"
+description: ""
+author: "Uli Niemann"
+date: 2018-01-31T18:30:00-00:00
+categories: ["R"]
+tags: ["Tutorial", "Meteorological Data"]
+draft: false
+showcomments: true
+comments: true
+---
+
+
+
+<p>In this post, we will systematically and reproducibly download weather data from the <a href="https://www.dwd.de/">German Meteorologica Service (Deutscher Wetterdienst)</a> website. Our goal is to gather historical temperature recordings from all available weather stations of my home state Saxony-Anhalt. The data is used in <a href="https://rbsenzaehler.shinyapps.io/Shiny_Temps_Saxony_Anhalt/">this R Shiny App</a> that serves as introductory demo for the course <a href="http://www.vismd.de/doku.php?id=teaching:visanalytics">Visual Analytics</a> which I teach at the University of Magdeburg.</p>
+<p>We can access historical and recent weather data from the German Meterologica Service from their dedicated <a href="ftp://ftp-cdc.dwd.de/pub/CDC/">ftp server</a>.<br />
+The files are organized in a folder structure where each weather station has its own zip folder containing the raw measurements.</p>
+<!-- ❤ -->
+<div class="figure">
+<img src="img/dwd_ftp.PNG" />
+
+</div>
+<p>First, we load all required libraries. Then, we browse to the subfolder <code>observations_germany/climate/daily/kl/recent/</code> to examine a text file that contains meta information for each weather station, i. e., its ID, location, height, longitude &amp; latitude, and the German state (Bundesland) where its located. Unfortunately, the file columns are rather awkwardly delimited (no csv style or similar) which means that we have to painfully parse each line by exact character positions.</p>
+<pre class="r"><code>library(stringr)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(purrr)
+library(rvest)
+library(lubridate)
+
+url_station_description &lt;- &quot;ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/daily/kl/recent/KL_Tageswerte_Beschreibung_Stationen.txt&quot;
+df_description &lt;- tibble(full = readLines(url_station_description))
+
+tidy_df_description &lt;- df_description %&gt;%
+  slice(-c(1:2)) %&gt;%
+  mutate(station_id = str_sub(full, 1,5)) %&gt;%
+  mutate(von_datum = str_sub(full, 6,14)) %&gt;%
+  mutate(bis_datum = str_sub(full, 15, 23)) %&gt;%
+  mutate(stationshoehe = str_sub(full, 24, 39)) %&gt;%
+  mutate(geo_breite = str_sub(full, 40, 52)) %&gt;%
+  mutate(geo_laenge = str_sub(full, 53, 60)) %&gt;%
+  mutate(station_name = str_sub(full, 61, 102)) %&gt;%
+  mutate(bundesland = str_sub(full, 103, 130)) %&gt;%
+  select(-full) %&gt;%
+  map_dfc(str_trim) %&gt;%
+  mutate(station_id = as.integer(station_id)) %&gt;%
+  mutate(geo_breite = as.double(geo_breite)) %&gt;%
+  mutate(geo_laenge = as.double(geo_laenge))
+
+# Filter stations located in my beloved home state ;-)
+df_st &lt;- tidy_df_description %&gt;% filter(bundesland == &quot;Sachsen-Anhalt&quot;)
+df_st</code></pre>
+<pre><code>## # A tibble: 53 x 8
+##    station_id von_datum bis_datum stationshoehe geo_breite geo_laenge
+##         &lt;int&gt;     &lt;chr&gt;     &lt;chr&gt;         &lt;chr&gt;      &lt;dbl&gt;      &lt;dbl&gt;
+##  1        184  19470101  19660630            55    52.6769    12.0077
+##  2        207  19470101  19641231           105    51.7498    11.4667
+##  3        445  18980101  20180129            84    51.8218    11.7109
+##  4        524  19470101  19921231            80    51.6333    12.3167
+##  5        722  19380101  20180129          1134    51.7986    10.6183
+##  6        948  19470101  19501231            60    51.8512    12.2515
+##  7       1052  19930501  20180129            80    52.2174    12.1641
+##  8       1074  19470401  19730228           103    51.3043    12.0810
+##  9       1182  19470101  20010531           146    51.5029    11.5705
+## 10       1488  19470101  19721231           523    51.6884    11.0394
+## # ... with 43 more rows, and 2 more variables: station_name &lt;chr&gt;,
+## #   bundesland &lt;chr&gt;</code></pre>
+<p>We see that there are 53 regional weather stations. However, the <code>bis_datum</code> variable shows that some of them were discontinued. How many weather stations are still currently active?</p>
+<pre class="r"><code>df_st %&gt;% filter(str_sub(bis_datum, 1, 4) == as.character(year(now()))) %&gt;% nrow()</code></pre>
+<pre><code>## [1] 25</code></pre>
+<p>Historical and recent temperature recordings are stored in separate folders. Therefore, we crawl each subfolder, compile a list of all hyperlinks pointing to the corresponding zip files of the stations’ raw temperature measurements and extract the station ID which is part of the hyperlink. Remember that we are only interested in Saxony-Anhalt’s weather stations, so we retain only those links that include the IDs of regional stations.</p>
+<pre class="r"><code>url_files &lt;- &quot;ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/daily/kl/&quot;
+files_dwd &lt;- tibble(file = read_html(str_c(url_files, &quot;historical/&quot;)) %&gt;% 
+                      html_text() %&gt;%
+                      str_extract_all(&quot;tageswerte_KL_\\d{5}_\\d{8}_\\d{8}_hist\\.zip&quot;) %&gt;% 
+                      unlist()) %&gt;%
+  bind_rows(
+    tibble(file = read_html(str_c(url_files, &quot;recent/&quot;)) %&gt;% rvest::html_text() %&gt;%
+             str_extract_all(&quot;tageswerte_KL_\\d{5}_akt\\.zip&quot;) %&gt;% unlist())
+  ) %&gt;%
+  mutate(station_id = as.integer(str_sub(file, 15, 19))) %&gt;%
+  filter(station_id %in% df_st$station_id) %&gt;%
+  mutate(complete_url = str_c(url_files, ifelse(str_detect(file, &quot;hist&quot;),  &quot;historical/&quot;, &quot;recent/&quot;), file))
+
+head(files_dwd, 3) %&gt;% as.data.frame()</code></pre>
+<pre><code>##                                             file station_id
+## 1 tageswerte_KL_00184_19470101_19660630_hist.zip        184
+## 2 tageswerte_KL_00207_19470101_19641231_hist.zip        207
+## 3 tageswerte_KL_00445_18980101_20161231_hist.zip        445
+##                                                                                                                   complete_url
+## 1 ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_00184_19470101_19660630_hist.zip
+## 2 ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_00207_19470101_19641231_hist.zip
+## 3 ftp://ftp-cdc.dwd.de/pub/CDC/observations_germany/climate/daily/kl/historical/tageswerte_KL_00445_18980101_20161231_hist.zip</code></pre>
+<p>Next, we will download the zip files. We create a temporary local folder and download all zip files. We extract the archives into a separate folder, iteratively load the relevant files (only those containing the substring “produkt”), rowwise combine them, and finally delete the temporary folders and their contents.</p>
+<pre class="r"><code># Download files
+if(!file.exists(&quot;zip_files&quot;)) {dir.create(&quot;zip_files/&quot;)}
+walk(1:nrow(files_dwd), ~ download.file(files_dwd$complete_url[.x], destfile = str_c(&quot;zip_files/&quot;, files_dwd$file[.x])))
+
+# Unzip all containers into a new directory.
+if(!file.exists(&quot;zip_files_unzipped&quot;)) {dir.create(&quot;zip_files_unzipped/&quot;)}
+list.files(&quot;zip_files&quot;, full.names = TRUE) %&gt;% walk(~ unzip(.x, exdir = str_c(getwd(), &quot;/zip_files_unzipped&quot;)))
+
+# We read all &#39;;&#39;-separated files that contain the temperature data, rowwise combine them and 
+# apply an inner join with the meta data from above
+# to have also the name of the station and its geoposition available.
+temperature_data_st &lt;- list.files(&quot;zip_files_unzipped&quot;, full.names = TRUE, pattern = &quot;^produkt&quot;) %&gt;%
+  map_dfr(~read_delim(.x, delim = &quot;;&quot;, trim_ws = TRUE, na = &quot;-999&quot;, col_types = c(&quot;iicddcdcddddddddddc&quot;))) %&gt;%
+  inner_join(df_st %&gt;% select(STATIONS_ID = station_id, geo_breite, geo_laenge, station_name), by = &quot;STATIONS_ID&quot;)
+
+# Remove temporary folders and files.
+unlink(&quot;zip_files&quot;, recursive = TRUE)
+unlink(&quot;zip_files_unzipped&quot;, recursive = TRUE)
+
+# Select relevant variables
+temperature_data_st &lt;- temperature_data_st %&gt;%
+  select(STATIONS_ID, # station id
+         station_name, # station name
+         MESS_DATUM, # measuring date
+         RSK, # daily precipitation depth
+         SDK, # daily sunshine hours
+         PM, # avg. air pressure
+         TMK, # avg. temperature
+         UPM, # avg. humidity
+         TXK, # max. temperature at 2m
+         TNK, # min. temperature at 2m
+         TGK, # min. temperature at 5cm,
+         geo_breite, # latitude of station position
+         geo_laenge # longitude of station position
+  ) 
+
+temperature_data_st</code></pre>
+<pre><code>## # A tibble: 679,141 x 13
+##    STATIONS_ID  station_name MESS_DATUM   RSK   SDK     PM   TMK   UPM
+##          &lt;int&gt;         &lt;chr&gt;      &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1        1960 Halle (Stadt)   18510101   0.0    NA 1005.9   7.5    87
+##  2        1960 Halle (Stadt)   18510102   0.0    NA 1008.1   6.2    83
+##  3        1960 Halle (Stadt)   18510103   0.0    NA 1009.4   4.0    80
+##  4        1960 Halle (Stadt)   18510104   0.3    NA 1005.3   4.3    87
+##  5        1960 Halle (Stadt)   18510105   0.0    NA  999.6   1.7    94
+##  6        1960 Halle (Stadt)   18510106   0.0    NA  994.7   2.3    90
+##  7        1960 Halle (Stadt)   18510107   1.4    NA  996.1   1.5    86
+##  8        1960 Halle (Stadt)   18510108   5.0    NA  997.4   3.6    95
+##  9        1960 Halle (Stadt)   18510109   0.0    NA 1004.4   4.0    92
+## 10        1960 Halle (Stadt)   18510110   0.0    NA 1015.8   3.0    89
+## # ... with 679,131 more rows, and 5 more variables: TXK &lt;dbl&gt;, TNK &lt;dbl&gt;,
+## #   TGK &lt;dbl&gt;, geo_breite &lt;dbl&gt;, geo_laenge &lt;dbl&gt;</code></pre>
+<p>As mentioned in the beginning, the data are visualized in this small <a href="https://rbsenzaehler.shinyapps.io/Shiny_Temps_Saxony_Anhalt/">R Shiny app</a>.</p>
+<div class="figure">
+<img src="img/shiny_app_temps_st_screenshot.png" />
+
+</div>
+<pre class="r"><code>sessionInfo()</code></pre>
+<pre><code>## R version 3.4.1 (2017-06-30)
+## Platform: x86_64-w64-mingw32/x64 (64-bit)
+## Running under: Windows 10 x64 (build 16299)
+## 
+## Matrix products: default
+## 
+## locale:
+## [1] LC_COLLATE=German_Germany.1252  LC_CTYPE=German_Germany.1252   
+## [3] LC_MONETARY=German_Germany.1252 LC_NUMERIC=C                   
+## [5] LC_TIME=German_Germany.1252    
+## 
+## attached base packages:
+## [1] methods   stats     graphics  grDevices utils     datasets  base     
+## 
+## other attached packages:
+##  [1] bindrcpp_0.2    lubridate_1.7.1 rvest_0.3.2     xml2_1.1.1     
+##  [5] purrr_0.2.4     tidyr_0.7.2     readr_1.1.1     dplyr_0.7.4    
+##  [9] stringr_1.2.0   blogdown_0.3   
+## 
+## loaded via a namespace (and not attached):
+##  [1] Rcpp_0.12.14     knitr_1.18       bindr_0.1        magrittr_1.5    
+##  [5] hms_0.3          R6_2.2.2         rlang_0.1.4      httr_1.3.1      
+##  [9] tools_3.4.1      htmltools_0.3.6  yaml_2.1.14      rprojroot_1.2   
+## [13] digest_0.6.14    assertthat_0.2.0 tibble_1.3.4     bookdown_0.5    
+## [17] curl_3.0         glue_1.1.1       evaluate_0.10.1  rmarkdown_1.8   
+## [21] stringi_1.1.6    compiler_3.4.1   backports_1.1.1  pkgconfig_2.0.1</code></pre>

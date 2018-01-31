@@ -62,7 +62,7 @@ library(lubridate)
 library(stringr)
 library(forcats)
 library(rtweet)
-library(EBImage)
+# library(EBImage)
 library(ggimage)
 library(ggplot2bdc)
 library(extrafont)
@@ -228,7 +228,7 @@ The respective number is ca. `r round(100*goering$n_fromteam[1]/goering$n[1])`% 
 We can assume that a considerable number of retweets are also not sent by the politicians themselves.  
 
 
-![](/img/lindner_ges.png)
+![](img/lindner_ges.png)
 
 
 
